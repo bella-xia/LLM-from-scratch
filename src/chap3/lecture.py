@@ -1,9 +1,9 @@
 import argparse, torch
-from naive_activations import softmax_naive
-from self_attention import SelfAttention
-from causal_attention import CausalAttention
-from naive_multihead_attention import MultiHeadAttentionWrapper
-from multihead_attention import MultiHeadAttention
+from src.chap3.naive_activations import softmax_naive
+from src.chap3.self_attention import SelfAttention
+from src.chap3.causal_attention import CausalAttention
+from src.chap3.naive_multihead_attention import MultiHeadAttentionWrapper
+from src.chap3.multihead_attention import MultiHeadAttention
 
 if __name__ == '__main__':
 

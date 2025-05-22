@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from self_attention import SelfAttention
+from src.chap3.self_attention import SelfAttention
 
 class CausalAttention(SelfAttention):
     def __init__(self, d_in, d_out, context_len, dropout, 

@@ -1,18 +1,22 @@
-import re, tiktoken, argparse, torch
-from simple_tokenizer import SimpleTokenizer
-from simple_dataloader import create_dataloader
+import re, tiktoken, argparse, torch, os
+from src.chap2.simple_tokenizer import SimpleTokenizer
+from src.chap2.simple_dataloader import create_dataloader
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", type=str, default="data/the-verdict.txt")
+    parser.add_argument("-i", "--input", type=str, default="the-verdict.txt")
     parser.add_argument("-m", "--mode", type=int, default=1)
 
     args = parser.parse_args()
 
     # ----- 2.1 initializaing ----- #
     print("# ----- 2.1 initializing ----- #")
-    with open(args.input, 'r', encoding='utf-8') as f:
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_script_dir, '..', '..'))
+    data_dir = os.path.join(project_root, 'data')
+
+    with open(os.path.join(data_dir, args.input), 'r', encoding='utf-8') as f:
         raw_text : str = f.read()
     
     print(f"total number of characters: {len(raw_text)}")
