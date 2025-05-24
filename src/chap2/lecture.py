@@ -116,8 +116,9 @@ if __name__ == '__main__':
             desired = enc_sample[i]
             print(tokenizer.decode(context), "---->", tokenizer.decode([desired]))
         
-        _, dataloader = create_dataloader(
-            raw_text, batch_size=1, max_len=4, stride=1, shuffle=False
+        dataloader = create_dataloader(
+            raw_text, batch_size=1, max_len=4, stride=1, shuffle=False,
+            tokenizer=tokenizer
         )
         data_iter = iter(dataloader)
         print("first two batches from the dataloader:")
