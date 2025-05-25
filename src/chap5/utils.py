@@ -35,3 +35,14 @@ def print_sampled_tokens(probs,
 def softmax_with_temperature(logits, temperature):
     scaled_logits = logits / temperature
     return torch.softmax(scaled_logits, dim=0)
+
+def find_highest_gradient(model):
+    max_grad = None
+    for param in model.parameters():
+        if param.grad is not None:
+            grad_values = param.grad.data.flatten()
+            max_grad_param = grad_values.max()
+            if not max_grad or max_grad_param > max_grad:
+                max_grad = max_grad_param
+    
+    return max_grad

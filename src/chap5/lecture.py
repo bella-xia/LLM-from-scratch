@@ -1,12 +1,13 @@
-import argparse, torch, tiktoken, os
+import argparse, torch, tiktoken, os, math
+import matplotlib.pyplot as plt
 from src.chap2.simple_dataloader import create_dataloader
 from src.chap4.gpt_model import GPTModel
 from src.chap4.config import GPT_CONFIG_124M
 from src.chap4.utils import naive_generate_text
-from src.chap5.utils import text_to_token_ids, token_ids_to_text, plot_losses
-from src.chap5.loss_fn import calc_loss_loader
+from src.chap5.utils import text_to_token_ids, token_ids_to_text, plot_losses, find_highest_gradient
+from src.chap5.loss_fn import calc_loss_loader, calc_loss_batch
 from src.chap5.training import train_model_simple, generate_and_print_sample
-from src.chap5.gpt_download import download_and_load_gpt2
+# from src.chap5.gpt_download import download_and_load_gpt2
 
 if __name__ == "__main__":
 
@@ -136,7 +137,8 @@ if __name__ == "__main__":
         print("# ----- 5.3 use topk and temperature for text generation ----- #")
         optimizer : torch.optim.Optimizer = torch.optim.AdamW(
             model.parameters(),
-            lr=4e-4
+            lr=4e-4,
+            weight_decay=0.1
         )
         num_epochs = 10
         train_losses, val_losses, token_seen = train_model_simple(
@@ -175,6 +177,7 @@ if __name__ == "__main__":
         )
 
     # ----- 5.5 loading pretrained weights from OpenAI ----- #
+    # currently failed due to problems with tensorflow
     if args.mode == 5:
         print("# ----- 5.5 loading pretrained weights from OpenAI ----- #")
         settings, params = download_and_load_gpt2(
@@ -184,5 +187,90 @@ if __name__ == "__main__":
         print("settings:", settings)
         print("parameter dictionary keys:", params.keys())
 
+    # ----- 5.6 adding bells and whistles to training ----- #
+    if args.mode == 6:
+        print("# ----- 5.6 adding bells and whistles to training ----- #")
+    
+    if args.mode == 6 and args.section <= 2:
+        n_epochs = 15
+        initial_lr = 0.0001
+        peak_lr = 0.01
+        warmup_steps = 30
+
+        optimizer = torch.optim.AdamW(
+            model.parameters(),
+            weight_decay=0.1
+        )
+        lr_increment = (peak_lr - initial_lr) / warmup_steps
+        global_step = -1
+        total_train_steps = len(train_dataloader) * n_epochs
+        track_lrs = []
+
+    # ----- 5.6.1 rate warmup ----- #
+    if args.mode == 6 and args.section == 1:
+        print("# ----- 5.6.1 rate warmup ----- #")
+
+        for epoch in range(n_epochs):
+            for input_batch, target_batch in train_dataloader:
+                optimizer.zero_grad()
+                global_step += 1
+
+                if global_step < warmup_steps:
+                    lr = initial_lr + global_step * lr_increment
+                else:
+                    lr = peak_lr
+                
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = lr
+                track_lrs.append(optimizer.param_groups[0]['lr'])
+            
+        plt.ylabel('learning rate')
+        plt.xlabel('step')
+        plt.plot(range(total_train_steps), track_lrs)
+        plt.show()
+
+    # ----- 5.6.2 cosine decay ----- #
+    if args.mode == 6 and args.section == 2:
+        print("# ----- 5.6.2 cosine decay ----- #")
+        min_lr = 0.1 * initial_lr
+        for epoch in range(n_epochs):
+            for input_batch, target_batch in train_dataloader:
+                optimizer.zero_grad()
+                global_step += 1
+
+                if global_step < warmup_steps:
+                    lr = initial_lr + global_step * lr_increment
+                else:
+                    progress = ((global_step - warmup_steps) / (total_train_steps - warmup_steps))
+                    lr = min_lr + (peak_lr - min_lr) * 0.5 * (
+                        1 + math.cos(math.pi * progress))
+
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = lr
+                track_lrs.append(optimizer.param_groups[0]['lr'])
+            
+        plt.ylabel('learning rate')
+        plt.xlabel('step')
+        plt.plot(range(total_train_steps), track_lrs)
+        plt.show()                  
+
+    # ----- 5.6.3 gradient clipping ----- #
+    if args.mode == 6 and args.section == 3:
+
+        for input_batch, target_batch in train_dataloader:
+            break
+        
+        loss = calc_loss_batch(
+            input_batch, target_batch, model, device
+        )
+        loss.backward()
+
+        print("hihgest gradient before clipping:", find_highest_gradient(model))
+
+        torch.nn.utils.clip_grad_norm_(
+            model.parameters(),
+            max_norm=1.0
+        )
+        print("hihgest gradient after clipping:", find_highest_gradient(model))
 
 
